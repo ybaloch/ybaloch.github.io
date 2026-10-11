@@ -9,294 +9,11 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<style>
-/* ============================================================
-   0. TOKENS
-   ============================================================ */
-:root{
-  --bg:#060a10;
-  --bg-raised:#0d1522;
-  --bg-raised-2:#121e2f;
-  --green:#3cff6e;
-  --green-dim:#1f7a3d;
-  --cyan:#35e8ff;
-  --magenta:#ff3fb4;
-  --amber:#ffb020;
-  --text:#cfe8d8;
-  --text-dim:#6f8c7e;
-  --notch:9px;
-  --font-display:'Press Start 2P', monospace;
-  --font-body:'VT323', monospace;
-  --nav-h:52px;
-}
-
-/* ============================================================
-   1. RESET / BASE
-   ============================================================ */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{scroll-behavior:smooth;background:var(--bg);}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:var(--font-body);
-  font-size:20px;
-  line-height:1.5;
-  overflow-x:hidden;
-  min-height:100vh;
-  position:relative;
-}
-body.custom-cursor-active, body.custom-cursor-active a, body.custom-cursor-active button, body.custom-cursor-active input{cursor:none;}
-body.is-booting{overflow:hidden;height:100vh;}
-h1,h2,h3{font-family:var(--font-display);font-weight:400;line-height:1.5;}
-a{color:var(--cyan);text-decoration:none;}
-img,svg,canvas{display:block;max-width:100%;}
-button,input{font-family:var(--font-body);}
-ul{list-style:none;}
-
-::selection{background:var(--green);color:var(--bg);}
-
-::-webkit-scrollbar{width:10px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--green-dim);border:2px solid var(--bg);}
-::-webkit-scrollbar-thumb:hover{background:var(--green);}
-
-:focus-visible{outline:2px solid var(--cyan);outline-offset:3px;}
-
-.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
-
-/* ============================================================
-   2. UTILITIES — pixel-cut frame, glow, scanlines
-   ============================================================ */
-.pixel-frame{
-  clip-path:polygon(
-    0 var(--notch), var(--notch) var(--notch), var(--notch) 0,
-    calc(100% - var(--notch)) 0, calc(100% - var(--notch)) var(--notch), 100% var(--notch),
-    100% calc(100% - var(--notch)), calc(100% - var(--notch)) calc(100% - var(--notch)), calc(100% - var(--notch)) 100%,
-    var(--notch) 100%, var(--notch) calc(100% - var(--notch)), 0 calc(100% - var(--notch))
-  );
-}
-.glow-green{text-shadow:0 0 6px rgba(60,255,110,.65), 0 0 16px rgba(60,255,110,.3);}
-.glow-cyan{text-shadow:0 0 6px rgba(53,232,255,.65), 0 0 16px rgba(53,232,255,.3);}
-
-#scanlines{
-  position:fixed;inset:0;z-index:60;pointer-events:none;mix-blend-mode:overlay;
-  background:repeating-linear-gradient(to bottom, rgba(255,255,255,.05) 0px, rgba(255,255,255,.05) 1px, transparent 2px, transparent 3px);
-  animation:flicker 6s steps(60) infinite;
-}
-#vignette{position:fixed;inset:0;z-index:59;pointer-events:none;
-  background:radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.55) 100%);
-}
-@keyframes flicker{0%,100%{opacity:.55;}42%{opacity:.55;}43%{opacity:.35;}44%{opacity:.6;}78%{opacity:.5;}79%{opacity:.3;}80%{opacity:.55;}}
-
-/* ============================================================
-   3. CANVAS LAYERS + CUSTOM CURSOR
-   ============================================================ */
-#matrix-canvas{position:fixed;inset:0;z-index:0;background:var(--bg);}
-#particle-canvas{position:fixed;inset:0;z-index:1;pointer-events:none;}
-
-.cursor{
-  position:fixed;top:0;left:0;width:22px;height:22px;z-index:70;
-  pointer-events:none;transform:translate(-50%,-50%);
-  border:2px solid var(--green);opacity:.9;
-  clip-path:polygon(0 0,7px 0,7px 2px,2px 2px,2px 7px,0 7px,
-                     0 0,100% 0,100% 0,calc(100% - 7px) 0,calc(100% - 7px) 2px,calc(100% - 2px) 2px,calc(100% - 2px) 7px,100% 7px,
-                     100% 100%,100% calc(100% - 7px),calc(100% - 2px) calc(100% - 7px),calc(100% - 2px) calc(100% - 2px),calc(100% - 7px) calc(100% - 2px),calc(100% - 7px) 100%,
-                     0 100%,0 calc(100% - 7px),2px calc(100% - 7px),2px calc(100% - 2px),7px calc(100% - 2px),7px 100%);
-  transition:width .15s, height .15s, border-color .15s, opacity .2s;
-  display:none;
-}
-body.custom-cursor-active .cursor{display:block;}
-.cursor.is-active{width:38px;height:38px;border-color:var(--magenta);}
-.cursor-dot{
-  position:fixed;top:0;left:0;width:4px;height:4px;background:var(--green);z-index:70;
-  pointer-events:none;transform:translate(-50%,-50%);display:none;
-}
-body.custom-cursor-active .cursor-dot{display:block;}
-
-/* ============================================================
-   4. BOOT SCREEN
-   ============================================================ */
-#boot-screen{
-  position:fixed;inset:0;z-index:100;background:var(--bg);color:var(--green);
-  font-family:var(--font-body);font-size:22px;padding:6vh 6vw;
-  transition:opacity .5s ease, visibility .5s ease;
-  cursor:pointer;
-}
-#boot-screen.hidden{opacity:0;visibility:hidden;pointer-events:none;}
-#boot-log{white-space:pre-wrap;max-width:760px;}
-#boot-log .ok{color:var(--text-dim);}
-#boot-log .ok b{color:var(--green);}
-#boot-caret{display:inline-block;width:11px;height:1.1em;background:var(--green);vertical-align:text-bottom;animation:blink 1s steps(2) infinite;}
-#boot-skip{position:absolute;bottom:5vh;left:6vw;color:var(--text-dim);font-size:16px;}
-@keyframes blink{50%{opacity:0;}}
-
-/* ============================================================
-   5. NAV
-   ============================================================ */
-.tabbar{
-  position:fixed;top:0;left:0;right:0;z-index:50;height:var(--nav-h);
-  display:flex;align-items:center;gap:2px;padding:0 14px;
-  background:rgba(6,10,16,.82);backdrop-filter:blur(6px);
-  border-bottom:1px solid var(--green-dim);
-  overflow-x:auto;
-}
-.tabbar .brand{font-family:var(--font-display);font-size:12px;color:var(--green);margin-right:auto;white-space:nowrap;padding-right:14px;}
-.tab{
-  font-family:var(--font-body);font-size:18px;color:var(--text-dim);
-  padding:8px 14px;white-space:nowrap;border-top:2px solid transparent;
-  transition:color .15s, border-color .15s, background .15s;
-}
-.tab:hover, .tab:focus-visible{color:var(--green);background:rgba(60,255,110,.06);}
-.tab.active{color:var(--green);border-top-color:var(--green);}
-
-/* ============================================================
-   6. LAYOUT / SECTIONS
-   ============================================================ */
-main{position:relative;z-index:2;}
-section, footer#contact{
-  position:relative;z-index:2;padding:110px 6vw 90px;max-width:1180px;margin:0 auto;
-  scroll-margin-top:var(--nav-h);
-}
-.eyebrow{
-  font-family:var(--font-body);color:var(--cyan);font-size:19px;letter-spacing:.5px;
-  display:flex;align-items:center;gap:10px;margin-bottom:18px;
-}
-.eyebrow::before{content:"$";color:var(--magenta);}
-h2.section-title{font-size:clamp(20px,3vw,32px);color:var(--text);margin-bottom:34px;}
-
-/* ---- HERO ---- */
-#hero{
-  min-height:100svh;display:flex;flex-direction:column;justify-content:center;
-  padding-top:var(--nav-h);
-}
-#hero-title{
-  font-size:clamp(38px,9vw,108px);color:var(--green);letter-spacing:2px;
-  min-height:1.3em;
-}
-#hero-subtitle{
-  font-family:var(--font-body);font-size:clamp(20px,3vw,30px);color:var(--cyan);margin-top:18px;min-height:1.6em;
-}
-.hero-prompt{margin-top:34px;font-size:22px;color:var(--text-dim);}
-.hero-prompt b{color:var(--green);}
-.hero-prompt .blink-caret{display:inline-block;width:11px;height:1.05em;background:var(--green);vertical-align:text-bottom;animation:blink 1s steps(2) infinite;margin-left:2px;}
-.scroll-hint{margin-top:64px;color:var(--text-dim);font-size:16px;display:flex;align-items:center;gap:8px;animation:bob 2.2s ease-in-out infinite;}
-@keyframes bob{0%,100%{transform:translateY(0);}50%{transform:translateY(8px);}}
-
-/* ---- TERMINAL WINDOW COMPONENT ---- */
-.term-window{
-  background:var(--bg-raised);border:1px solid var(--green-dim);
-}
-.term-chrome{
-  display:flex;align-items:center;gap:8px;padding:10px 14px;
-  background:var(--bg-raised-2);border-bottom:1px solid var(--green-dim);
-}
-.term-chrome .dot{width:11px;height:11px;background:var(--text-dim);}
-.term-chrome .dot:nth-child(1){background:var(--magenta);}
-.term-chrome .dot:nth-child(2){background:var(--amber);}
-.term-chrome .dot:nth-child(3){background:var(--green);}
-.term-chrome .title{margin-left:8px;color:var(--text-dim);font-size:17px;}
-.term-body{padding:20px 22px;font-size:19px;}
-.term-body p{margin-bottom:10px;color:var(--text);}
-.term-body p:last-child{margin-bottom:0;}
-.term-body .muted{color:var(--text-dim);}
-.term-body .tag{color:var(--magenta);}
-
-/* ---- ABOUT ---- */
-#about .term-window{max-width:760px;}
-
-/* ---- SKILLS ---- */
-.skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
-.skill-card{
-  background:var(--bg-raised);border:1px solid var(--green-dim);padding:20px;
-  opacity:0;transform:translateY(18px);transition:opacity .5s ease, transform .5s ease;
-}
-.skill-card.in-view{opacity:1;transform:translateY(0);}
-.skill-card .row{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
-.skill-card canvas{image-rendering:pixelated;flex-shrink:0;}
-.skill-card .name{font-size:19px;color:var(--text);}
-.bar-track{height:12px;background:var(--bg-raised-2);border:1px solid var(--green-dim);position:relative;}
-.bar-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--green),var(--cyan));transition:width 1.6s steps(24);}
-.bar-label{margin-top:6px;font-size:15px;color:var(--text-dim);text-align:right;}
-
-/* ---- LIVE TERMINAL ---- */
-#terminal-section .term-window{max-width:900px;}
-#term-output{height:340px;overflow-y:auto;font-size:18px;}
-#term-output .line{margin-bottom:6px;white-space:pre-wrap;word-break:break-word;}
-#term-output .prompt-line b{color:var(--green);}
-#term-output .prompt-line span.cmd{color:var(--text);}
-#term-output .err{color:var(--magenta);}
-#term-output .hl{color:var(--amber);}
-#term-output pre{font-family:var(--font-body);font-size:18px;color:var(--green);line-height:1.35;}
-#term-form{display:flex;align-items:center;gap:8px;border-top:1px solid var(--green-dim);padding:14px 22px;}
-#term-form b{color:var(--green);font-size:19px;}
-#term-input{
-  flex:1;background:transparent;border:none;color:var(--text);font-size:19px;
-  caret-color:var(--green);outline:none;
-}
-.term-hint{margin-top:12px;color:var(--text-dim);font-size:15px;}
-
-/* ---- CERTS ---- */
-.certs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;}
-.cert-badge{
-  background:var(--bg-raised);border:1px solid var(--green-dim);padding:18px;
-  display:flex;gap:14px;align-items:flex-start;position:relative;overflow:hidden;
-}
-.cert-badge canvas{image-rendering:pixelated;flex-shrink:0;}
-.cert-badge h3{font-family:var(--font-body);font-size:20px;color:var(--text);margin-bottom:2px;}
-.cert-badge .org{font-size:15px;color:var(--text-dim);margin-bottom:8px;}
-.cert-badge .status{font-size:14px;letter-spacing:.5px;padding:3px 8px;display:inline-block;}
-.cert-badge.complete .status{color:var(--green);border:1px solid var(--green-dim);}
-.cert-badge.progress .status{color:var(--amber);border:1px solid var(--amber);}
-.cert-badge.progress::after{
-  content:"";position:absolute;left:-40%;top:0;bottom:0;width:40%;
-  background:linear-gradient(90deg,transparent,rgba(255,176,32,.18),transparent);
-  animation:scan 2.4s linear infinite;
-}
-@keyframes scan{0%{left:-40%;}100%{left:100%;}}
-
-/* ---- CONTACT / FOOTER ---- */
-footer#contact{padding-bottom:70px;}
-.contact-links{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;}
-.term-link{
-  border:1px solid var(--green-dim);padding:12px 18px;font-size:19px;color:var(--text);
-  display:inline-flex;align-items:center;gap:8px;transition:border-color .15s, color .15s, background .15s;
-}
-.term-link::before{content:"$";color:var(--magenta);}
-.term-link:hover, .term-link:focus-visible{border-color:var(--green);color:var(--green);background:rgba(60,255,110,.06);}
-.foot-note{margin-top:46px;color:var(--text-dim);font-size:15px;}
-
-/* ============================================================
-   7. SCRAMBLE GLYPH
-   ============================================================ */
-.scramble-glyph{color:var(--magenta);}
-
-/* ============================================================
-   8. RESPONSIVE
-   ============================================================ */
-@media (max-width: 720px){
-  section, footer#contact{padding:80px 5vw 60px;}
-  #term-output{height:280px;}
-  .tabbar{gap:0;}
-  .tab{padding:8px 10px;font-size:16px;}
-  body{font-size:18px;}
-}
-
-/* ============================================================
-   9. REDUCED MOTION
-   ============================================================ */
-@media (prefers-reduced-motion: reduce){
-  html{scroll-behavior:auto;}
-  #scanlines{animation:none;opacity:.35;}
-  .scroll-hint{animation:none;}
-  .cert-badge.progress::after{animation:none;display:none;}
-  .bar-fill{transition:none;}
-  .skill-card{transition:none;}
-  #boot-caret,.blink-caret{animation:none;}
-}
-</style>
+<link rel="stylesheet" href="style.b4f7ad5f.css">
 </head>
 <body class="is-booting">
 
+<!-- Effect layers (populated and animated by script.js) -->
 <div id="vignette" aria-hidden="true"></div>
 <div id="scanlines" aria-hidden="true"></div>
 <canvas id="matrix-canvas" aria-hidden="true"></canvas>
@@ -335,14 +52,50 @@ footer#contact{padding-bottom:70px;}
         <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         <span class="title">whoami.sh</span>
       </div>
-      <div class="term-body" id="about-body"></div>
+      <div class="term-body" id="about-body">
+        <p>SOC Analyst II with 5+ years defending networks — now spending my nights and weekends learning to attack them instead.</p>
+        <p>Currently on the security team at DigitalOcean, based in Islamabad, Pakistan. PNPT-certified. OSCP in progress. B.Sc. from PIEAS.</p>
+        <p>Comfortable in Active Directory, cloud attack paths, and the gap between what a web app's spec says and what it actually does.</p>
+      </div>
     </div>
   </section>
 
   <section id="skills">
     <div class="eyebrow">cat skills.log</div>
     <h2 class="section-title">what I actually do</h2>
-    <div class="skills-grid" id="skills-grid"></div>
+    <div class="skills-grid" id="skills-grid">
+      <!-- data-icon: terminal | shield | lock    data-level: 0-100 -->
+      <div class="skill-card" data-icon="shield" data-level="93">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">SOC Detection &amp; Threat Analysis</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">93%</div>
+      </div>
+      <div class="skill-card" data-icon="terminal" data-level="88">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">Network &amp; Web App Pentesting</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">88%</div>
+      </div>
+      <div class="skill-card" data-icon="lock" data-level="82">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">Active Directory Exploitation</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">82%</div>
+      </div>
+      <div class="skill-card" data-icon="lock" data-level="85">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">Cloud Offensive Security (AWS/Azure/GCP)</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">85%</div>
+      </div>
+      <div class="skill-card" data-icon="terminal" data-level="80">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">API Security Testing</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">80%</div>
+      </div>
+      <div class="skill-card" data-icon="shield" data-level="90">
+        <div class="row"><canvas class="skill-icon"></canvas><span class="name">MITRE ATT&amp;CK Mapping &amp; Reporting</span></div>
+        <div class="bar-track"><div class="bar-fill"></div></div>
+        <div class="bar-label">90%</div>
+      </div>
+    </div>
   </section>
 
   <section id="terminal-section">
@@ -365,567 +118,38 @@ footer#contact{padding-bottom:70px;}
   <section id="certs">
     <div class="eyebrow">ls -la certs/</div>
     <h2 class="section-title">credentials on disk</h2>
-    <div class="certs-grid" id="certs-grid"></div>
+    <div class="certs-grid" id="certs-grid">
+      <!-- data-status: complete | progress -->
+      <div class="cert-badge complete" data-status="complete">
+        <canvas class="cert-icon"></canvas>
+        <div><h3>PNPT</h3><div class="org">TCM Security</div><span class="status">COMPLETE</span></div>
+      </div>
+      <div class="cert-badge progress" data-status="progress">
+        <canvas class="cert-icon"></canvas>
+        <div><h3>OSCP</h3><div class="org">Offensive Security</div><span class="status">IN PROGRESS</span></div>
+      </div>
+      <div class="cert-badge complete" data-status="complete">
+        <canvas class="cert-icon"></canvas>
+        <div><h3>B.Sc.</h3><div class="org">PIEAS</div><span class="status">COMPLETE</span></div>
+      </div>
+    </div>
   </section>
 
   <footer id="contact">
     <div class="eyebrow">./contact.sh</div>
     <h2 class="section-title">open a channel</h2>
     <div class="contact-links">
+      <!-- Replace each href="#" with the real URL / mailto: link -->
       <a class="term-link" href="#" data-social="github">open --github</a>
       <a class="term-link" href="#" data-social="linkedin">open --linkedin</a>
       <a class="term-link" href="#" data-social="email">send --mail</a>
     </div>
-    <p class="foot-note">// links are placeholders — wire them up in CONFIG.social at the top of the script.<br>rendered entirely in HTML, CSS and vanilla JS. no frameworks, no build step.</p>
+    <p class="foot-note">// links are placeholders — set the href on each link above.<br>rendered entirely in HTML, CSS and vanilla JS. no frameworks, no build step.</p>
   </footer>
 </main>
 
-<script>
-(function(){
-"use strict";
-
-/* ============================================================
-   CONFIG — edit this block to make the page yours
-   ============================================================ */
-const CONFIG = {
-  name: "YAHYA BALOCH",
-  host: "yahya",
-  subtitle: "SOC Analyst II // moving to the offensive side",
-  bio: [
-    "SOC Analyst II with 5+ years defending networks — now spending my nights and weekends learning to attack them instead.",
-    "Currently on the security team at DigitalOcean, based in Islamabad, Pakistan. PNPT-certified. OSCP in progress. B.Sc. from PIEAS.",
-    "Comfortable in Active Directory, cloud attack paths, and the gap between what a web app's spec says and what it actually does."
-  ],
-  skills: [
-    {name:"SOC Detection & Threat Analysis", level:93, icon:"shield"},
-    {name:"Network & Web App Pentesting", level:88, icon:"terminal"},
-    {name:"Active Directory Exploitation", level:82, icon:"lock"},
-    {name:"Cloud Offensive Security (AWS/Azure/GCP)", level:85, icon:"lock"},
-    {name:"API Security Testing", level:80, icon:"terminal"},
-    {name:"MITRE ATT&CK Mapping & Reporting", level:90, icon:"shield"}
-  ],
-  certs: [
-    {name:"PNPT", org:"TCM Security", status:"complete"},
-    {name:"OSCP", org:"Offensive Security", status:"progress"},
-    {name:"B.Sc.", org:"PIEAS", status:"complete"}
-  ],
-  social: { github:"#", linkedin:"#", email:"#" }
-};
-
-/* ============================================================
-   UTILS
-   ============================================================ */
-const $  = (sel, ctx) => (ctx||document).querySelector(sel);
-const $$ = (sel, ctx) => Array.from((ctx||document).querySelectorAll(sel));
-const rand = (a,b) => Math.random()*(b-a)+a;
-const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-const lerp = (a,b,t) => a+(b-a)*t;
-const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-function escapeHTML(str){
-  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-
-const mouse = { x: window.innerWidth/2, y: window.innerHeight/2, active:false };
-window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; }, {passive:true});
-window.addEventListener('mouseleave', () => { mouse.active = false; });
-
-/* ============================================================
-   PIXEL ICONS — hand-authored sprite grids, drawn on <canvas>
-   0 = empty, 1 = fill, 2 = outline, 3 = highlight
-   ============================================================ */
-const SPRITES = {
-  terminal: [
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,2,2,2,2,2,2,2,2,2,2,1],
-    [1,2,0,0,0,0,0,0,0,0,2,1],
-    [1,2,0,3,0,0,0,0,0,0,2,1],
-    [1,2,0,0,3,0,0,0,0,0,2,1],
-    [1,2,0,3,0,0,0,0,0,0,2,1],
-    [1,2,0,0,0,3,3,3,0,0,2,1],
-    [1,2,0,0,0,0,0,0,0,0,2,1],
-    [1,2,0,0,0,0,0,0,0,0,2,1],
-    [1,2,0,0,0,0,0,0,0,0,2,1],
-    [1,2,2,2,2,2,2,2,2,2,2,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1]
-  ],
-  shield: [
-    [0,0,1,1,1,1,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,1,1,1,1,0],
-    [1,1,1,2,2,1,1,2,2,1,1,1],
-    [1,1,1,2,2,1,1,2,2,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,3,1,1,3,1,1,1,1],
-    [0,1,1,1,1,1,1,1,1,1,1,0],
-    [0,1,1,1,1,1,1,1,1,1,1,0],
-    [0,0,1,1,1,1,1,1,1,1,0,0],
-    [0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,0,1,1,1,1,0,0,0,0],
-    [0,0,0,0,0,1,1,0,0,0,0,0]
-  ],
-  lock: [
-    [0,0,0,2,2,2,2,2,2,0,0,0],
-    [0,0,2,2,0,0,0,0,2,2,0,0],
-    [0,0,2,0,0,0,0,0,0,2,0,0],
-    [0,0,2,0,0,0,0,0,0,2,0,0],
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,1,3,3,3,3,1,1,1,1],
-    [1,1,1,1,3,0,0,3,1,1,1,1],
-    [1,1,1,1,3,3,3,3,1,1,1,1],
-    [1,1,1,1,1,3,3,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1,1,1],
-    [0,1,1,1,1,1,1,1,1,1,1,0]
-  ],
-  gem: [
-    [0,0,0,0,0,1,1,0,0,0,0,0],
-    [0,0,0,0,1,1,1,1,0,0,0,0],
-    [0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,1,1,1,2,2,1,1,1,0,0],
-    [0,1,1,1,2,2,2,2,1,1,1,0],
-    [1,1,1,2,2,2,2,2,2,1,1,1],
-    [0,1,1,1,2,2,2,2,1,1,1,0],
-    [0,0,1,1,1,2,2,1,1,1,0,0],
-    [0,0,0,1,1,1,1,1,1,0,0,0],
-    [0,0,0,0,1,1,1,1,0,0,0,0],
-    [0,0,0,0,0,1,1,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0]
-  ]
-};
-
-function drawPixelIcon(canvas, spriteName, palette, px){
-  const grid = SPRITES[spriteName];
-  if(!grid || !canvas) return;
-  px = px || 3;
-  const size = grid.length * px;
-  canvas.width = size; canvas.height = size;
-  canvas.style.width = size+'px'; canvas.style.height = size+'px';
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,size,size);
-  for(let r=0;r<grid.length;r++){
-    for(let c=0;c<grid[r].length;c++){
-      const v = grid[r][c];
-      if(!v) continue;
-      ctx.fillStyle = palette[v] || palette[1];
-      ctx.fillRect(c*px, r*px, px, px);
-    }
-  }
-}
-
-/* ============================================================
-   CUSTOM CURSOR
-   ============================================================ */
-function initCursor(){
-  if(!isFinePointer) return;
-  document.body.classList.add('custom-cursor-active');
-  const ring = $('#cursor'), dot = $('#cursor-dot');
-  let ringX = mouse.x, ringY = mouse.y;
-  function loop(){
-    ringX = lerp(ringX, mouse.x, 0.22);
-    ringY = lerp(ringY, mouse.y, 0.22);
-    ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%,-50%)`;
-    dot.style.transform = `translate(${mouse.x}px, ${mouse.y}px) translate(-50%,-50%)`;
-    requestAnimationFrame(loop);
-  }
-  loop();
-  const hoverables = 'a, button, input, .clickable, .skill-card, .cert-badge';
-  document.addEventListener('mouseover', e => { if(e.target.closest(hoverables)) ring.classList.add('is-active'); }, {passive:true});
-  document.addEventListener('mouseout', e => { if(e.target.closest(hoverables)) ring.classList.remove('is-active'); }, {passive:true});
-}
-
-/* ============================================================
-   MATRIX RAIN — mouse-reactive falling glyph field
-   ============================================================ */
-const MatrixRain = {
-  canvas:null, ctx:null, columns:0, drops:[], baseSpeed:[],
-  fontSize:16,
-  chars:"アイウエオカキクケコサシスセソタチツテト0123456789$#@%&*+-<>[]{}/=".split(''),
-  intense:false,
-  init(){
-    this.canvas = $('#matrix-canvas');
-    this.ctx = this.canvas.getContext('2d');
-    this.resize();
-    window.addEventListener('resize', () => this.resize());
-  },
-  resize(){
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-    this.columns = Math.ceil(this.canvas.width / this.fontSize);
-    this.drops = new Array(this.columns).fill(0).map(()=> rand(-60,0));
-    this.baseSpeed = new Array(this.columns).fill(0).map(()=> rand(0.35,0.9));
-  },
-  setIntense(on, ms){
-    this.intense = on;
-    if(on && ms){ clearTimeout(this._t); this._t = setTimeout(()=>{ this.intense = false; }, ms); }
-  },
-  frame(){
-    const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
-    ctx.fillStyle = this.intense ? 'rgba(6,10,16,0.045)' : 'rgba(6,10,16,0.11)';
-    ctx.fillRect(0,0,w,h);
-    ctx.font = this.fontSize + 'px monospace';
-    const radius = 200;
-    for(let i=0;i<this.columns;i++){
-      const x = i*this.fontSize;
-      const y = this.drops[i]*this.fontSize;
-      const ch = this.chars[(Math.random()*this.chars.length)|0];
-      let dist = Infinity;
-      if(mouse.active){ const dx=x-mouse.x, dy=y-mouse.y; dist = Math.sqrt(dx*dx+dy*dy); }
-      const near = dist < radius;
-      const t = near ? 1 - dist/radius : 0;
-      if(near){
-        const g = Math.round(lerp(160,255,t));
-        const b = Math.round(lerp(110,235,t));
-        ctx.fillStyle = `rgba(90,${g},${b},${0.45+t*0.55})`;
-      } else {
-        ctx.fillStyle = this.intense ? 'rgba(80,255,140,0.75)' : 'rgba(60,255,110,0.38)';
-      }
-      ctx.fillText(ch, x, y);
-      const speedMul = (this.intense ? 2.4 : 1) + t*2.4;
-      this.drops[i] += this.baseSpeed[i]*speedMul;
-      if(y > h && Math.random() > 0.975) this.drops[i] = rand(-30,0);
-    }
-  }
-};
-
-/* ============================================================
-   PARTICLE FIELD — ambient nodes + cursor constellation + click bursts
-   ============================================================ */
-const ParticleField = {
-  canvas:null, ctx:null, nodes:[], bursts:[],
-  palette:['#3cff6e','#35e8ff','#ff3fb4','#ffb020'],
-  init(){
-    this.canvas = $('#particle-canvas');
-    this.ctx = this.canvas.getContext('2d');
-    this.resize();
-    window.addEventListener('resize', () => this.resize());
-    window.addEventListener('mousedown', e => this.burst(e.clientX, e.clientY), {passive:true});
-  },
-  resize(){
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
-    const count = prefersReducedMotion ? 0 : clamp(Math.round((window.innerWidth*window.innerHeight)/22000), 24, 70);
-    this.nodes = new Array(count).fill(0).map(()=>({
-      x: rand(0,this.canvas.width), y: rand(0,this.canvas.height),
-      vx: rand(-0.18,0.18), vy: rand(-0.18,0.18),
-      color: this.palette[(Math.random()*this.palette.length)|0]
-    }));
-  },
-  burst(x,y){
-    if(prefersReducedMotion) return;
-    for(let i=0;i<18;i++){
-      const a = rand(0,Math.PI*2), sp = rand(1.2,4.2);
-      this.bursts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,color:this.palette[(Math.random()*this.palette.length)|0]});
-    }
-  },
-  frame(){
-    const ctx = this.ctx, w = this.canvas.width, h = this.canvas.height;
-    ctx.clearRect(0,0,w,h);
-    const linkDist = 130;
-    for(let i=0;i<this.nodes.length;i++){
-      const n = this.nodes[i];
-      n.x += n.vx; n.y += n.vy;
-      if(n.x < 0 || n.x > w) n.vx *= -1;
-      if(n.y < 0 || n.y > h) n.vy *= -1;
-      if(mouse.active){
-        const dx = n.x-mouse.x, dy = n.y-mouse.y, d = Math.sqrt(dx*dx+dy*dy);
-        if(d < linkDist){
-          ctx.strokeStyle = `rgba(53,232,255,${(1-d/linkDist)*0.55})`;
-          ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(mouse.x,mouse.y); ctx.stroke();
-        }
-      }
-      for(let j=i+1;j<this.nodes.length;j++){
-        const o = this.nodes[j];
-        const dx = n.x-o.x, dy = n.y-o.y, d = Math.sqrt(dx*dx+dy*dy);
-        if(d < linkDist){
-          ctx.strokeStyle = `rgba(60,255,110,${(1-d/linkDist)*0.16})`;
-          ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(o.x,o.y); ctx.stroke();
-        }
-      }
-      ctx.fillStyle = n.color;
-      ctx.fillRect(n.x-1.5, n.y-1.5, 3, 3);
-    }
-    for(let i=this.bursts.length-1;i>=0;i--){
-      const p = this.bursts[i];
-      p.x += p.vx; p.y += p.vy; p.vx *= 0.94; p.vy *= 0.94; p.life -= 0.022;
-      if(p.life <= 0){ this.bursts.splice(i,1); continue; }
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = clamp(p.life,0,1);
-      ctx.fillRect(p.x-2, p.y-2, 4, 4);
-      ctx.globalAlpha = 1;
-    }
-  }
-};
-
-function animate(){
-  if(!prefersReducedMotion) MatrixRain.frame();
-  ParticleField.frame();
-  requestAnimationFrame(animate);
-}
-
-/* ============================================================
-   TEXT SCRAMBLE — decode-in effect for headings
-   ============================================================ */
-class TextScramble{
-  constructor(el){
-    this.el = el;
-    this.chars = '!<>-_/[]{}=+*^#01';
-    this.queue = [];
-    this.frame = 0;
-    this.frameRequest = null;
-    this.resolve = null;
-  }
-  setText(newText){
-    const oldText = this.el.textContent;
-    const length = Math.max(oldText.length, newText.length);
-    const promise = new Promise(res => this.resolve = res);
-    this.queue = [];
-    for(let i=0;i<length;i++){
-      const from = oldText[i] || '';
-      const to = newText[i] || '';
-      const start = Math.floor(rand(0,20));
-      const end = start + Math.floor(rand(10,30));
-      this.queue.push({from,to,start,end,char:null});
-    }
-    cancelAnimationFrame(this.frameRequest);
-    this.frame = 0;
-    this.update();
-    return promise;
-  }
-  update(){
-    let output = '', complete = 0;
-    for(let i=0;i<this.queue.length;i++){
-      let {from,to,start,end,char} = this.queue[i];
-      if(this.frame >= end){ complete++; output += to; }
-      else if(this.frame >= start){
-        if(!char || Math.random() < 0.28){ char = this.chars[(Math.random()*this.chars.length)|0]; this.queue[i].char = char; }
-        output += `<span class="scramble-glyph">${char}</span>`;
-      } else {
-        output += from;
-      }
-    }
-    this.el.innerHTML = output;
-    if(complete === this.queue.length){ this.resolve(); }
-    else { this.frameRequest = requestAnimationFrame(()=>{ this.frame++; this.update(); }); }
-  }
-}
-
-/* ============================================================
-   BOOT SEQUENCE
-   ============================================================ */
-const BOOT_LINES = [
-  "BIOS ................................ pixel-tty rev 2.6",
-  "[ OK ] Booting kernel",
-  "[ OK ] Mounting /dev/curiosity",
-  "[ OK ] Starting network-manager.service",
-  "[ OK ] Initialising pixel-render engine",
-  "[ OK ] Loading offensive-security toolkit",
-  "[ OK ] Calibrating cursor tracking",
-  "[ OK ] Spawning matrix daemon",
-  "",
-  "Welcome, guest.",
-  "Type 'help' once you're in, or just look around."
-];
-
-function runBoot(done){
-  const screen = $('#boot-screen'), log = $('#boot-log');
-  if(prefersReducedMotion){
-    finish();
-    return;
-  }
-  let i = 0;
-  let finished = false;
-  function typeLine(){
-    if(i >= BOOT_LINES.length){ setTimeout(finish, 500); return; }
-    const div = document.createElement('div');
-    div.className = 'ok';
-    log.appendChild(div);
-    const text = BOOT_LINES[i];
-    let c = 0;
-    (function typeChar(){
-      if(finished) return;
-      div.textContent = text.slice(0,c);
-      c++;
-      if(c <= text.length){ setTimeout(typeChar, 6); }
-      else { i++; setTimeout(typeLine, text ? 55 : 120); }
-    })();
-  }
-  function finish(){
-    if(finished) return;
-    finished = true;
-    screen.classList.add('hidden');
-    document.body.classList.remove('is-booting');
-    document.removeEventListener('keydown', finish);
-    screen.removeEventListener('click', finish);
-    setTimeout(done, 150);
-  }
-  document.addEventListener('keydown', finish);
-  screen.addEventListener('click', finish);
-  typeLine();
-}
-
-/* ============================================================
-   POPULATE CONTENT FROM CONFIG
-   ============================================================ */
-function populateContent(){
-  $('#hero-subtitle').textContent = CONFIG.subtitle;
-
-  const aboutBody = $('#about-body');
-  aboutBody.innerHTML = CONFIG.bio.map(line => `<p>${escapeHTML(line)}</p>`).join('');
-
-  const skillsGrid = $('#skills-grid');
-  skillsGrid.innerHTML = '';
-  CONFIG.skills.forEach(skill => {
-    const card = document.createElement('div');
-    card.className = 'skill-card';
-    card.innerHTML = `
-      <div class="row">
-        <canvas class="skill-icon"></canvas>
-        <span class="name">${escapeHTML(skill.name)}</span>
-      </div>
-      <div class="bar-track"><div class="bar-fill" data-level="${skill.level}"></div></div>
-      <div class="bar-label">${skill.level}%</div>
-    `;
-    skillsGrid.appendChild(card);
-    drawPixelIcon(card.querySelector('.skill-icon'), skill.icon, {1:'#3cff6e',2:'#0d1522',3:'#35e8ff'}, 3);
-  });
-
-  const certsGrid = $('#certs-grid');
-  certsGrid.innerHTML = '';
-  CONFIG.certs.forEach(cert => {
-    const badge = document.createElement('div');
-    badge.className = 'cert-badge ' + (cert.status === 'complete' ? 'complete' : 'progress');
-    badge.innerHTML = `
-      <canvas class="cert-icon"></canvas>
-      <div>
-        <h3>${escapeHTML(cert.name)}</h3>
-        <div class="org">${escapeHTML(cert.org)}</div>
-        <span class="status">${cert.status === 'complete' ? 'COMPLETE' : 'IN PROGRESS'}</span>
-      </div>
-    `;
-    certsGrid.appendChild(badge);
-    drawPixelIcon(badge.querySelector('.cert-icon'), 'gem', cert.status === 'complete' ? {1:'#3cff6e',2:'#0d1522'} : {1:'#ffb020',2:'#0d1522'}, 3);
-  });
-
-  $$('.contact-links a').forEach(a => {
-    const key = a.dataset.social;
-    if(CONFIG.social[key]) a.href = CONFIG.social[key];
-  });
-}
-
-/* ============================================================
-   SCROLL REVEAL (skill cards + nav highlighting)
-   ============================================================ */
-function initScrollReveal(){
-  const cards = $$('.skill-card');
-  const obs = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){
-        entry.target.classList.add('in-view');
-        const fill = entry.target.querySelector('.bar-fill');
-        if(fill) requestAnimationFrame(()=>{ fill.style.width = fill.dataset.level + '%'; });
-        obs.unobserve(entry.target);
-      }
-    });
-  }, {threshold:0.2});
-  cards.forEach(c => obs.observe(c));
-
-  const sections = $$('main section, footer#contact');
-  const tabs = $$('.tab');
-  const navObs = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if(entry.isIntersecting){
-        tabs.forEach(t => t.classList.toggle('active', t.dataset.target === entry.target.id));
-      }
-    });
-  }, {threshold:0.5});
-  sections.forEach(s => navObs.observe(s));
-}
-
-/* ============================================================
-   LIVE TERMINAL
-   ============================================================ */
-const Terminal = {
-  output:null, input:null, history:[], histIndex:-1,
-  init(){
-    this.output = $('#term-output');
-    this.input = $('#term-input');
-    $('#term-form').addEventListener('submit', e => {
-      e.preventDefault();
-      const val = this.input.value;
-      if(!val.trim()) return;
-      this.echo(val);
-      this.history.push(val);
-      this.histIndex = this.history.length;
-      this.run(val.trim());
-      this.input.value = '';
-    });
-    this.input.addEventListener('keydown', e => {
-      if(e.key === 'ArrowUp'){
-        e.preventDefault();
-        if(this.histIndex > 0){ this.histIndex--; this.input.value = this.history[this.histIndex] || ''; }
-      } else if(e.key === 'ArrowDown'){
-        e.preventDefault();
-        if(this.histIndex < this.history.length){ this.histIndex++; this.input.value = this.history[this.histIndex] || ''; }
-      }
-    });
-    $('#terminal-section .term-window')?.addEventListener('click', () => this.input.focus());
-    this.print(`Type <b>help</b> for a list of commands.`);
-  },
-  focus(){ this.input.focus(); },
-  echo(val){
-    const div = document.createElement('div');
-    div.className = 'line prompt-line';
-    div.innerHTML = `<b>guest@yahya:~$</b> <span class="cmd">${escapeHTML(val)}</span>`;
-    this.output.appendChild(div);
-  },
-  print(html, cls){
-    const div = document.createElement('div');
-    div.className = 'line' + (cls ? ' '+cls : '');
-    div.innerHTML = html;
-    this.output.appendChild(div);
-    this.output.scrollTop = this.output.scrollHeight;
-  },
-  printPre(text){
-    const pre = document.createElement('pre');
-    pre.textContent = text;
-    this.output.appendChild(pre);
-    this.output.scrollTop = this.output.scrollHeight;
-  },
-  clear(){ this.output.innerHTML = ''; },
-  scrollBottom(){ this.output.scrollTop = this.output.scrollHeight; },
-  run(raw){
-    const parts = raw.split(/\s+/);
-    const cmd = parts[0].toLowerCase();
-    const args = parts.slice(1);
-    const fn = this.commands[cmd];
-    if(fn){ fn.call(this, args); }
-    else { this.print(`command not found: ${escapeHTML(cmd)} — type <b>help</b>`, 'err'); }
-    this.scrollBottom();
-  },
-  commands:{
-    help(){
-      this.printPre(
-`help        show this list
-whoami      who runs this box
-neofetch    system info, the fun way
-skills      jump to skills
-certs       jump to certs
-contact     jump to contact
-ls          list files in this directory
-cat <file>  read a file
-clear       clear the screen
-date        current date/time
-history     your command history
-matrix      turn up the rain for a bit
-hack <ip>   run a totally-safe simulated scan
-sudo <cmd>  try it and see`);
-    },
-    whoami(){ CONFIG.bio.forEach(l => this.print(escapeHTML(l))); },
-    neofetch(){
-      this.printPre(
-`############
+<!-- Static text used by the live shell's `neofetch` command -->
+<template id="neofetch-data">############
 #  YAHYA   #
 ############
 os     : Linux (offensive edition)
@@ -933,108 +157,8 @@ role   : SOC Analyst II -> Pentester
 certs  : PNPT [ok], OSCP [in progress]
 edu    : B.Sc, PIEAS
 shell  : /bin/curiosity
-uptime : 5+ years in the SOC`);
-    },
-    skills(){ $('#skills').scrollIntoView({behavior: prefersReducedMotion?'auto':'smooth'}); this.print('scrolling to skills...'); },
-    certs(){ $('#certs').scrollIntoView({behavior: prefersReducedMotion?'auto':'smooth'}); this.print('scrolling to certs...'); },
-    contact(){ $('#contact').scrollIntoView({behavior: prefersReducedMotion?'auto':'smooth'}); this.print('scrolling to contact...'); },
-    ls(){ this.print('about.txt&nbsp;&nbsp;skills.log&nbsp;&nbsp;certs.db&nbsp;&nbsp;contact.sh&nbsp;&nbsp;README.md'); },
-    cat(args){
-      const file = (args[0]||'').toLowerCase();
-      const files = {
-        'about.txt': CONFIG.bio.join(' '),
-        'skills.log': CONFIG.skills.map(s=>`${s.name} — ${s.level}%`).join(' | '),
-        'certs.db': CONFIG.certs.map(c=>`${c.name} (${c.org}): ${c.status}`).join(' | '),
-        'contact.sh': "#!/bin/sh — links live in the contact section below.",
-        'readme.md': "This page is a single index.html: no build step, no framework. View source, it's all there."
-      };
-      if(!file){ this.print('usage: cat &lt;file&gt;'); return; }
-      if(files[file]){ this.print(escapeHTML(files[file])); }
-      else { this.print(`cat: ${escapeHTML(file)}: No such file or directory`, 'err'); }
-    },
-    clear(){ this.clear(); },
-    date(){ this.print(escapeHTML(new Date().toString())); },
-    history(){ this.history.length ? this.history.forEach((h,i)=>this.print(`${i+1}  ${escapeHTML(h)}`)) : this.print('history is empty'); },
-    matrix(args){
-      MatrixRain.setIntense(true, 4500);
-      this.print('turning up the rain for a few seconds...', 'hl');
-    },
-    sudo(args){
-      const target = args.join(' ') || 'root';
-      this.print(`[sudo] password for guest: `, 'muted');
-      this.print(`guest is not in the sudoers file. this incident will not be reported (it's a static site).`, 'err');
-    },
-    hack(args){
-      const target = args[0] || 'localhost';
-      const self = this;
-      this.print(`initiating scan on ${escapeHTML(target)}...`, 'hl');
-      let pct = 0;
-      const bar = document.createElement('div');
-      bar.className = 'line';
-      bar.setAttribute('aria-hidden', 'true');
-      this.output.appendChild(bar);
-      const iv = setInterval(()=>{
-        pct = Math.min(100, pct + Math.round(rand(8,22)));
-        const filled = Math.round(pct/5);
-        bar.textContent = '[' + '#'.repeat(filled) + '-'.repeat(20-filled) + `] ${pct}%`;
-        self.scrollBottom();
-        if(pct >= 100){
-          clearInterval(iv);
-          self.print(`ACCESS GRANTED — just kidding. this is a portfolio, not an exploit. nice curiosity though.`, 'hl');
-        }
-      }, 180);
-    },
-    exit(){ this.print("can't exit the matrix from here. try closing the tab."); },
-    logout(){ this.commands.exit.call(this); },
-    echo(args){ this.print(escapeHTML(args.join(' '))); }
-  }
-};
+uptime : 5+ years in the SOC</template>
 
-/* ============================================================
-   INIT
-   ============================================================ */
-function initHeroText(){
-  const titleEl = $('#hero-title');
-  const subEl = $('#hero-subtitle');
-  if(prefersReducedMotion){
-    titleEl.textContent = CONFIG.name;
-    subEl.textContent = CONFIG.subtitle;
-    return;
-  }
-  titleEl.textContent = '';
-  new TextScramble(titleEl).setText(CONFIG.name).then(() => {
-    new TextScramble(subEl).setText(CONFIG.subtitle);
-  });
-}
-
-function initSmoothNav(){
-  $$('.tab').forEach(tab => {
-    tab.addEventListener('click', e => {
-      e.preventDefault();
-      const target = $('#' + tab.dataset.target);
-      if(target) target.scrollIntoView({behavior: prefersReducedMotion ? 'auto' : 'smooth'});
-    });
-  });
-}
-
-function safely(fn){ try{ fn(); } catch(err){ console.error(err); } }
-
-document.addEventListener('DOMContentLoaded', () => {
-  safely(populateContent);
-  safely(() => MatrixRain.init());
-  safely(() => ParticleField.init());
-  safely(initCursor);
-  safely(initScrollReveal);
-  safely(initSmoothNav);
-  safely(() => Terminal.init());
-  requestAnimationFrame(animate);
-
-  // runBoot is called unconditionally (outside safely()) so the boot screen
-  // always resolves and the page is always reachable, even if a subsystem above failed.
-  runBoot(() => safely(initHeroText));
-});
-
-})();
-</script>
+<script src="script.b18ce505.js"></script>
 </body>
 </html>
